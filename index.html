@@ -432,11 +432,21 @@
         const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
         let currentEmploymentType = "fulltime";
         let dayReceipts = {}; // Store receipts for each day
+        
+        // Separate data storage for fulltime and contractor
+        let fulltimeShifts = {};
+        let contractorShifts = {};
 
         document.addEventListener("DOMContentLoaded", () => {
-            let daysHTML = "";
+            // Initialize shift data storage
             daysOfWeek.forEach(d => {
                 dayReceipts[d] = [];
+                fulltimeShifts[d] = {};
+                contractorShifts[d] = {};
+            });
+
+            let daysHTML = "";
+            daysOfWeek.forEach(d => {
                 daysHTML += `
                 <div class="day-row" data-day="${d}" data-employment="fulltime">
                     <div class="day-header">${d}</div>
@@ -446,7 +456,6 @@
                             <input type="time" class="start-time" onchange="calculateTimesheet()">
                         </div>
 
-                        <!-- FINISH below START by forcing it into the first column -->
                         <div class="input-wrapper finish-wrapper">
                             <label>Finish Time</label>
                             <input type="time" class="finish-time" onchange="calculateTimesheet()">
@@ -596,33 +605,13 @@
             const jobInput = row.querySelector(".job-code-input");
 
             if (holidaySelect && holidaySelect.value === "H") {
-                // Holiday selected - disable all fields
-                if (startTime) {
-                    startTime.disabled = true;
-                    startTime.value = "";
-                }
-                if (finishTime) {
-                    finishTime.disabled = true;
-                    finishTime.value = "";
-                }
-                if (breakInput) {
-                    breakInput.disabled = true;
-                    breakInput.value = "";
-                }
-                if (expenses) {
-                    expenses.disabled = true;
-                    expenses.value = "";
-                }
-                if (hotelSelect) {
-                    hotelSelect.disabled = true;
-                    hotelSelect.value = "";
-                }
-                if (jobInput) {
-                    jobInput.disabled = true;
-                    jobInput.value = "";
-                }
+                if (startTime) { startTime.disabled = true; startTime.value = ""; }
+                if (finishTime) { finishTime.disabled = true; finishTime.value = ""; }
+                if (breakInput) { breakInput.disabled = true; breakInput.value = ""; }
+                if (expenses) { expenses.disabled = true; expenses.value = ""; }
+                if (hotelSelect) { hotelSelect.disabled = true; hotelSelect.value = ""; }
+                if (jobInput) { jobInput.disabled = true; jobInput.value = ""; }
             } else {
-                // Holiday not selected - enable all fields
                 if (startTime) startTime.disabled = false;
                 if (finishTime) finishTime.disabled = false;
                 if (breakInput) breakInput.disabled = false;
@@ -657,7 +646,7 @@
             };
             reader.readAsDataURL(file);
 
-            e.target.value = ""; // Reset input
+            e.target.value = "";
         });
 
         function displayReceipt(day, receipt) {
@@ -689,7 +678,6 @@
             const selector = document.getElementById("employment-type");
             currentEmploymentType = selector.value;
 
-            // Hide/show day rows based on employment type
             daysOfWeek.forEach(d => {
                 const fulltimeRow = document.querySelector(`.day-row[data-day="${d}"][data-employment="fulltime"]`);
                 const contractorRow = document.querySelector(`.day-row[data-day="${d}"][data-employment="contractor"]`);
@@ -697,25 +685,25 @@
                 if (currentEmploymentType === "fulltime") {
                     fulltimeRow.classList.remove("hidden");
                     contractorRow.classList.add("hidden");
-                    document.getElementById("name-label").textContent = "Driver's Name";
-                    document.getElementById("standdown-box").style.display = "block";
-                    document.getElementById("total-box").style.display = "block";
-                    document.getElementById("expenses-box").style.display = "none";
-                    document.getElementById("mileage-box").style.display = "none";
-                    document.getElementById("live-stats").classList.remove("contractor");
-                    document.getElementById("live-stats").classList.add("fulltime");
                 } else {
                     fulltimeRow.classList.add("hidden");
                     contractorRow.classList.remove("hidden");
-                    document.getElementById("name-label").textContent = "Contractor Name";
-                    document.getElementById("standdown-box").style.display = "none";
-                    document.getElementById("total-box").style.display = "none";
-                    document.getElementById("expenses-box").style.display = "block";
-                    document.getElementById("mileage-box").style.display = "block";
-                    document.getElementById("live-stats").classList.remove("fulltime");
-                    document.getElementById("live-stats").classList.add("contractor");
                 }
             });
+
+            document.getElementById("name-label").textContent = currentEmploymentType === "fulltime" ? "Driver's Name" : "Contractor Name";
+            document.getElementById("standdown-box").style.display = currentEmploymentType === "fulltime" ? "block" : "none";
+            document.getElementById("total-box").style.display = currentEmploymentType === "fulltime" ? "block" : "none";
+            document.getElementById("expenses-box").style.display = currentEmploymentType === "fulltime" ? "none" : "block";
+            document.getElementById("mileage-box").style.display = currentEmploymentType === "fulltime" ? "none" : "block";
+            
+            if (currentEmploymentType === "fulltime") {
+                document.getElementById("live-stats").classList.remove("contractor");
+                document.getElementById("live-stats").classList.add("fulltime");
+            } else {
+                document.getElementById("live-stats").classList.remove("fulltime");
+                document.getElementById("live-stats").classList.add("contractor");
+            }
 
             loadFormData();
             showHolidayForFulltime();
@@ -760,11 +748,7 @@
 
                     if (startMins !== null && finishMins !== null) {
                         let diffMins = finishMins - startMins;
-
-                        if (diffMins <= 0) {
-                            diffMins += 1440;
-                        }
-
+                        if (diffMins <= 0) { diffMins += 1440; }
                         hrs = Math.round((diffMins / 60) * 10) / 10;
                     }
                 }
@@ -825,7 +809,6 @@
                 const green = [46, 125, 50];
                 const greyOut = [200, 200, 200];
 
-                // Header
                 doc.setFont("Helvetica", "bold");
                 doc.setFontSize(22);
                 doc.setTextColor(...red);
@@ -849,7 +832,6 @@
                 doc.setLineWidth(1);
                 doc.line(15, 26, 280, 26);
 
-                // Meta
                 doc.setFillColor(...lightGrey);
                 doc.rect(15, 29, 265, 12, "F");
                 doc.setFont("Helvetica", "bold");
@@ -859,12 +841,10 @@
                 doc.text(nameLabel + personName, 18, 36);
                 doc.text("WEEK ENDING: " + formattedDate, 277, 36, { align: "right" });
 
-                // Table Headers
                 let y = 46;
                 doc.setFillColor(220, 220, 220);
                 doc.setDrawColor(200, 200, 200);
                 doc.setLineWidth(0.2);
-
                 doc.setFontSize(8);
                 doc.setTextColor(0, 0, 0);
 
@@ -890,10 +870,8 @@
                 doc.rect(payrollX, y, 80, 7, "F");
                 doc.text("FOR PAYROLL ONLY", payrollX + 40, y + 5, { align: "center" });
 
-                // Table Rows
                 y += 7;
                 calculatedData.shifts.forEach((s) => {
-                    // Check if holiday - grey out entire row
                     const isHoliday = s.holiday === "H";
 
                     if (isHoliday) {
@@ -942,7 +920,6 @@
                         curX += colWidths[idx+1];
                     });
 
-                    // Add "Holiday" text in green under Break column if holiday is selected
                     if (isHoliday) {
                         doc.setTextColor(...green);
                         doc.setFont("Helvetica", "bold");
@@ -955,11 +932,9 @@
                     }
 
                     doc.rect(200, y, 20, 8); doc.rect(220, y, 20, 8); doc.rect(240, y, 20, 8); doc.rect(260, y, 20, 8);
-
                     y += 8;
                 });
 
-                // Stand Down row (only for full-time)
                 if (currentEmploymentType === "fulltime") {
                     doc.setFont("Helvetica", "bolditalic");
                     doc.setTextColor(...red);
@@ -979,14 +954,11 @@
 
                     blankX += colWidths[6];
                     doc.rect(blankX, y, colWidths[7], 8);
-
                     doc.setDrawColor(200, 200, 200);
                     doc.rect(200, y, 20, 8); doc.rect(220, y, 20, 8); doc.rect(240, y, 20, 8); doc.rect(260, y, 20, 8);
-
                     y += 8;
                 }
 
-                // Totals Row
                 doc.setTextColor(0, 0, 0);
                 doc.setFillColor(235, 240, 245);
                 doc.rect(15, y, 180, 8, "F");
@@ -1010,7 +982,6 @@
 
                 y += 15;
 
-                // Footer notes and signatures
                 doc.setDrawColor(200, 200, 200);
                 doc.rect(15, y, 120, 25);
                 doc.setFont("Helvetica", "bold");
@@ -1019,12 +990,9 @@
 
                 doc.setFont("Helvetica", "normal");
 
-                // Count 2-man bonuses
                 let bonusCount = 0;
                 calculatedData.shifts.forEach(s => {
-                    if (s.bonus) {
-                        bonusCount++;
-                    }
+                    if (s.bonus) bonusCount++;
                 });
 
                 let notesList = [];
@@ -1043,7 +1011,6 @@
                 doc.setFontSize(8.5);
                 doc.text(notesList.slice(0, 3).join(", "), 18, y + 12);
 
-                // Signatures
                 doc.rect(145, y, 135, 25);
                 doc.setFont("Helvetica", "bold");
                 doc.setFontSize(8);
@@ -1056,7 +1023,6 @@
                 doc.setTextColor(26, 35, 126);
                 doc.text(personName, 210, y + 16);
 
-                // Document code data lines
                 doc.setTextColor(150, 150, 150);
                 doc.setFont("Helvetica", "normal");
                 doc.setFontSize(7);
@@ -1065,7 +1031,6 @@
                 doc.text("Issue 2", 145, y + 33, { align: "center" });
                 doc.text("October 2020", 280, y + 33, { align: "right" });
 
-                // Add Receipts Pages - one receipt per page with clear numbering
                 let hasReceipts = false;
                 for (let day in dayReceipts) {
                     if (dayReceipts[day].length > 0) {
@@ -1075,7 +1040,6 @@
                 }
 
                 if (hasReceipts) {
-                    // Collect all receipts
                     let allReceipts = [];
                     for (let day in dayReceipts) {
                         for (let receipt of dayReceipts[day]) {
@@ -1083,11 +1047,8 @@
                         }
                     }
 
-                    // Add each receipt on its own page
                     allReceipts.forEach((receipt, index) => {
                         doc.addPage();
-
-                        // Header with larger receipt number
                         doc.setFont("Helvetica", "bold");
                         doc.setFontSize(16);
                         doc.setTextColor(...red);
@@ -1104,7 +1065,6 @@
                         doc.text(`(${index + 1} of ${allReceipts.length})`, 15, 37);
 
                         try {
-                            // Detect image format from data URL
                             const dataUrl = receipt.data;
                             let imageFormat = 'JPEG';
                             if (dataUrl.includes('data:image/png')) {
@@ -1115,7 +1075,6 @@
                                 imageFormat = 'WEBP';
                             }
 
-                            // Center the receipt image on the page - scaled down for readability
                             const imgWidth = 100;
                             const imgHeight = 130;
                             const pageWidth = doc.internal.pageSize.getWidth();
@@ -1162,7 +1121,6 @@
             if (data.date) document.getElementById("input-date").value = data.date;
             if (data.manualNotes) document.getElementById("input-manual-notes").value = data.manualNotes;
 
-            // Load receipts
             if (data.receipts) {
                 dayReceipts = data.receipts;
                 daysOfWeek.forEach(d => {
@@ -1211,7 +1169,6 @@
                 document.querySelectorAll(`.day-row${employmentSelector} select.hotel-lodge-select, .day-row${employmentSelector} select.holiday-fulltime-select`).forEach(s => s.value = "");
                 document.querySelectorAll(`.day-row${employmentSelector} input[type='checkbox']`).forEach(c => c.checked = false);
 
-                // Clear receipts
                 daysOfWeek.forEach(d => {
                     dayReceipts[d] = [];
                     const containerId = currentEmploymentType === "fulltime" 
